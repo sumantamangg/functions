@@ -12,12 +12,12 @@ admin.initializeApp();
 exports.sendFollowerNotification = functions.database.ref('/notifications/{notifications_id}')
     .onWrite((change, context) => {
 
-        const user_id = context.params.user_id;
+        //const user_id = context.params.user_id;
         const notifications_id = context.params.notifications_id;
-        console.log("user id = ",user_id);
+        
 
         if(!change.after.val()){
-            return console.log('A Notification has been deleted from the databse: ',user_id);
+            return console.log('A Notification has been deleted from the databse: ');
             
         }
         const fromUser = admin.database().ref(`/notifications/${notifications_id}`).once('value');
@@ -31,7 +31,7 @@ exports.sendFollowerNotification = functions.database.ref('/notifications/{notif
             return userQuery.then(userResult =>{
                 const usereName = userResult.val();
 
-                const deviceToken = admin.database().ref(`/users/${user_id}/deviceToken`).once('value');
+                const deviceToken = admin.database().ref(`/users/BP6sgUJ3dxP0uZT4Yl8sGd9nCOk1/deviceToken`).once('value');
                 return deviceToken.then(result =>{
 
                 const tokenId = result.val();
