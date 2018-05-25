@@ -1,3 +1,4 @@
+
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
 //
@@ -9,17 +10,13 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 
-exports.sendFollowerNotification = functions.database.ref('/notifications/{notifications_id}')
-    .onWrite((change, context) => {
+exports.sendReqNotification = functions.database.ref('/notifications/{notifications_id}')
+    .onCreate((snapshot, context) => {
 
         //const user_id = context.params.user_id;
         const notifications_id = context.params.notifications_id;
         
 
-        if(!change.after.val()){
-            return console.log('A Notification has been deleted from the databse: ');
-            
-        }
         const fromUser = admin.database().ref(`/notifications/${notifications_id}`).once('value');
         return fromUser.then(fromUserResult =>{
             const from_user_id = fromUserResult.val().from;
@@ -61,7 +58,7 @@ exports.sendFollowerNotification = functions.database.ref('/notifications/{notif
                 };
                 
                      return admin.messaging().sendToDevice(tokenId, payload).then(response =>{
-                        return console.log('This was the notification Freature');
+                        return console.log('This was the notification Freature',tokenId);
                     });
                 });
                 
@@ -72,3 +69,59 @@ exports.sendFollowerNotification = functions.database.ref('/notifications/{notif
         });
              
     });
+
+
+exports.sendAcceptNotification = functions.database.ref('/notifications/{notifications_id}')
+    .onUpdate((change, context) => {
+        const notifications_id = context.params.notifications_id;
+        //const after = change.context.val();
+        //return console.log('value is updated',after);
+        const typee = admin.database().ref(`/notifications/${notifications_id}/type`).once('value');
+        return typee.then(typename =>{
+            const tp = typename.val();
+            if(tp === "accepted"){
+                const notificationdetail = admin.database().ref(`/notifications/${notifications_id}`).once('value'); //refer to notification object
+                return notificationdetail.then(notresult =>{
+                    const userId = notresult.val().from;
+                    const reqNode = notresult.val().uqid;
+                    const toUser = admin.database().ref(`/requests/${reqNode}/${userId}`).once('value'); //meeting info
+                    return toUser.then(userResult =>{
+                        const agenda = userResult.val().agenda;
+                        const heading = userResult.val().heading;
+                        const reqdate = userResult.val().date;
+                        const getTokend = admin.database().ref(`/users/${userId}/deviceToken`).once('value');
+                        return getTokend.then(toktok =>{
+                            const tokenidd = toktok.val();
+                            const payload = {
+                                notification:{
+                                    title : "Response to Your Request",
+                                    body : `Your meeting request has been accepted for ${reqdate}`,
+                                    icon : 'default',
+                                    click_action : 'android.intent.action.NotificationTo'
+                                },
+                                data :{
+                                    heading : heading,
+                                    agenda : agenda,
+                                    reqdate : reqdate,
+                                    fd : reqNode
+                                }
+                            };
+                            return admin.messaging().sendToDevice(tokenidd, payload).then(response =>{
+                                console.log('by this person',userId);
+                                return console.log('To this token',tokenidd);
+                            });
+                        });
+                    });
+                });
+            }
+            return console.log('new type is ',tp);
+        });
+    });
+
+
+
+
+    // const adminToken = admin.database().ref(`/users/BP6sgUJ3dxP0uZT4Yl8sGd9nCOk1/deviceToken`).once('value');
+    //             return adminToken.then(adToken =>{
+
+    //             });
