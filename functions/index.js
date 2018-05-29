@@ -53,7 +53,8 @@ exports.sendReqNotification = functions.database.ref('/notifications/{notificati
                             heading : heading,
                             agenda : agenda,
                             reqdate : reqdate,
-                            fd : fd
+                            fd : fd,
+                            noti_type : "requestType"
                         }
                 };
                 
@@ -92,30 +93,94 @@ exports.sendAcceptNotification = functions.database.ref('/notifications/{notific
                         const getTokend = admin.database().ref(`/users/${userId}/deviceToken`).once('value');
                         return getTokend.then(toktok =>{
                             const tokenidd = toktok.val();
-                            const payload = {
-                                notification:{
-                                    title : "Response to Your Request",
-                                    body : `Your meeting request has been accepted for ${reqdate}`,
-                                    icon : 'default',
-                                    click_action : 'android.intent.action.NotificationTo'
-                                },
-                                data :{
-                                    heading : heading,
-                                    agenda : agenda,
-                                    reqdate : reqdate,
-                                    fd : reqNode
-                                }
-                            };
-                            return admin.messaging().sendToDevice(tokenidd, payload).then(response =>{
-                                console.log('by this person',userId);
-                                return console.log('To this token',tokenidd);
+                            const userQuery = admin.database().ref(`/users/${userId}/name`).once('value');
+                            return userQuery.then(userResult =>{
+                                const usereName = userResult.val();
+                                console.log("party that accepted meeting =",usereName);
+                                const payload = {
+                                    notification:{
+                                        title : "Response to Your Request",
+                                        body : `Your meeting request has been accepted for ${reqdate}`,
+                                        icon : 'default',
+                                        click_action : 'android.intent.action.NotificationTo'
+                                    },
+                                    data :{
+                                        heading : heading,
+                                        agenda : agenda,
+                                        reqdate : reqdate,
+                                        fd : reqNode,
+                                        noti_type : "acceptedType",
+                                        partyname : `${usereName}`
+                                    }
+                                };
+                                return admin.messaging().sendToDevice(tokenidd, payload).then(response =>{
+                                    console.log('by this person',userId);
+                                    return console.log('To this token',tokenidd);
+                                });
                             });
+                            
                         });
                     });
                 });
             }
             return console.log('new type is ',tp);
         });
+    });
+
+
+
+exports.sendrejectNotification = functions.database.ref('/notifications/{notifications_id}')
+    .onDelete((snapshot, context) => {
+        const notifications_id = context.params.notifications_id;
+        console.log('notifications id= ',notifications_id);
+        const uqid = snapshot.val().uqid;
+        const user_id = snapshot.val().from;
+        const type = snapshot.val().type;
+
+    
+            if(type === "accepted"){
+                const userQuery = admin.database().ref(`/requests/${uqid}/${user_id}`).once('value');
+                return userQuery.then(displayInfo =>{
+                    const agenda = displayInfo.val().agenda;
+                    const heading = displayInfo.val().heading;
+                    const date = displayInfo.val().date;
+                    const state = displayInfo.val().state;
+                    const tokenId = admin.database().ref(`/users/BP6sgUJ3dxP0uZT4Yl8sGd9nCOk1/deviceToken`).once('value');
+                    return tokenId.then(gettoken =>{
+                        const deviceToken = gettoken.val();
+                        const userQuery = admin.database().ref(`/users/${user_id}/name`).once('value');
+                        return userQuery.then(userResult =>{
+                            const usereName = userResult.val();
+                            console.log("party that cancelled meeting =",usereName);
+                            const payload = {
+                                notification:{
+                                    title : "Cancelled Meeting",
+                                    body : `Your meeting on ${date} has been cancelled.`,
+                                    icon : 'default',
+                                    click_action : 'android.intent.action.NotificationTo'
+                                },
+                                data :{
+                                    heading : heading,
+                                    agenda : agenda,
+                                    reqdate : date,
+                                    fd : uqid,
+                                    user_id : user_id,
+                                    noti_type : "cancelledType",
+                                    partyname : `${usereName}`
+                                }
+                            };
+                            return admin.messaging().sendToDevice(deviceToken, payload).then(response =>{
+                                return console.log('accepted request has been cancelled.');
+                            });
+                        });
+                        
+                    });
+                });
+            }
+            else {
+                return console.log('sorry');
+            }
+        
     });
 
 
