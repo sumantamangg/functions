@@ -5,6 +5,8 @@
 // exports.helloWorld = functions.https.onRequest((request, response) => {
 //  response.send("Hello from Firebase!");
 // });
+
+
 'use strict'
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -54,7 +56,8 @@ exports.sendReqNotification = functions.database.ref('/notifications/{notificati
                             agenda : agenda,
                             reqdate : reqdate,
                             fd : fd,
-                            noti_type : "requestType"
+                            noti_type : "requestType",
+                            noti_id : `${notifications_id}`
                         }
                 };
                 
